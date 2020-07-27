@@ -1,0 +1,192 @@
+React Notes:
+
+ES6 Features to be comfortable with:
+  Object Initialization:
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer
+
+  Destructuring:
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment#Array_destructuring
+
+onDismiss function here being a handler for a click event
+onDismiss(id) {
+  // Old school way to do this:
+  // const updatedList = this.state.list.filter(function isNotId(item){
+  //   return item.objectID !== id;
+  // })
+
+  // Step 1 cleanup, extract the function:
+  // function isNotId(item) {
+  //   return item.objectID !== id;
+  // }
+  // const updatedList = this.state.list.filter(isNotId)
+  
+  // Step 2 cleanup, move them both to arrow function
+  // const isNotId = item => item.objectID !== id;
+  // const updatedList = this.state.list.filter(isNotId);
+
+  // Step 3 merge them into 1 arrow function
+  const updatedList = this.state.list.filter(item => item.objectId !== id);
+  this.setState({ list: updatedList });
+}
+
+
+Binding in class components:
+  You can do it else where but always do it in the constructor of a class component, doing it in the render function will hurt application performance:
+
+  You also could implement business logic in your ondmiss function in the constructor but this is bad practice as you'll end up majorly cluttering you constructor function. Keep it to just the bindings happening in the constructor, and business logic implemented in local functions. The constructor is there to instantiate your class 
+
+  constructor(props) {
+    super(props);
+    this.onDismiss = this.onDismiss.bind(this);
+  }
+
+  Unidirection data flow, the idea of clicking a button and updating state is then the application re-renders, it differs from other frameworks which do one way data binding like Angular (used to at least, newer versions use UDF).
+    https://medium.com/@luillyfe/unidirectional-data-flow-vs-two-way-binding-e34f1f08677
+    https://stackoverflow.com/questions/34519889/can-anyone-explain-the-difference-between-reacts-one-way-data-binding-and-angula
+
+
+Event Handling:
+
+The Difference Between these two is subtle but pretty large, the first is a higher order function that executes when you want it to on click, the second will be executed automatically when the page loads:
+
+  onClick = {() => this . onDismiss ( item . objectID )}
+  onClick = { this.onDismiss ( item . objectID )}
+
+
+
+
+Basic event handling looks like:
+
+```
+
+{this.state.list.map(item =>
+  <div key={item.objectId}>
+    <span>
+      <a href={item.url}>{item.title}</a>
+    </span>
+    <span>{item.author}</span>
+    <span>{item.num_comments}</span>
+    <span>{item.points}</span>
+    <span>
+      <button
+        onClick={() => this.onDismiss(item.objectId)}
+        type="button"
+      >
+        Dimiss
+      </button>
+    </span>
+  </div>
+)}
+```
+
+You can also assign the function to a variable within the map function and then just pass in the variable, this I assume would be useful when you need to do a bunch of different
+```
+{this.state.list.map(item => {
+  const onHandleDismiss = () => this.onDismiss(item.objectId);
+
+  return (
+    <div key={item.objectId}>
+      <span>
+        <a href={item.url}>{item.title}</a>
+      </span>
+      <span>{item.author}</span>
+      <span>{item.num_comments}</span>
+      <span>{item.points}</span>
+      <span>
+        <button
+          onClick={onHandleDismiss}
+          type="button"
+        >
+          Dimiss
+      </button>
+      </span>
+    </div>
+  );
+})}
+```
+
+
+
+Callback handlers for communicating back up the tree to different components:
+  A handler function is ?
+  A handler function passed from one component to another and used there becomes a callback handler
+
+  1. In app component you set the function up
+  ```
+  const handleSearch = event => {
+    console.log(event.target.value);
+  }
+  ```
+
+
+  2. Pass the callback function into the component as a props
+  ```
+  <Search onSearch={handleSearch} />
+  ```
+
+
+  3. Pass the event data you need back when you call the function in the child component
+  ```
+  const handleChange = event => {
+    setSearchTerm(event.target.value);
+    props.onSearch(event);
+  }
+  ```
+
+  Then we moved the state management back up to the parent most component afterward, since we need to pass it's data to sibiling components. You can see how with large component trees this becomes fairly unmanagable (hence the need for state management libraries like Redux, etc.)
+
+  "Always manage the state at a component where every component that’s interested in it is one that either manages the state (using information directly from state) or a component below the managing component (using information from props). If a component below needs to update the state, pass a callback handler down to it (see Search component). If a component needs to use the state (e.g. displaying it), pass it down as props."
+
+
+
+
+Controlled Components:
+
+  The concept of passing React state values into HTML elements, thereby bascially taking "control" over the html elements.
+
+  It also demonstrates Unidirection Data Flow:
+    -> UI (renders with some initial state) 
+    -> Side Effect (User clicks something, edits something, apii data returns)
+    -> State (State is updated based on the side effect that happened)
+    -> UI (Rendering happens again)
+
+  The useEffect hook may seem kind of weird at first, since it makes it look like in the function that is would reset the state on every re-render with the string passed in. React tracks this internally and only renders that value when it is initialized, after that it will take the most recent value.
+
+  `const [searchTerm, setSearchTerm] = React.useState('React');`
+
+
+  Advanced prop handling:
+    Destructuring the props in the function arguments `const Search = ({ search, onSearch }) => `
+    You can do it in a nested way, but it introduces a lot of clutter in the argument instead of the function or in the parent component passing it in.
+    Instead of passing all the props key/value in expcliity we can take advantage of the rest operator, this becomes useful anytime you are passing a decent amount of props to another component.
+
+    Ends with:
+
+    `const List = ({ list }) => list.map(({ objectID, ...item }) => (<Item key={objectID} {...item} />));`
+    `const Item = ({ title, url, author, num_comments, points }) => `
+
+
+Side effects:
+
+  useEffect hook
+  When we setup the useState hook, `const [searchTerm, setSearchTerm] = React.useState('')'` we defined the setSearchTerm value, if you want to have other effects happen when using that for example storing a search term in local storage:
+
+  ```
+  const handleSearch = event => {
+    setSearchTerm(event.target.value);
+    localStorage.setItem('search', event.target.value);
+  }
+  ```
+
+  You need to basically notify react of the effect you want to happen otherwise calling setSearchTerm in other places won't trigger the localstorage call. useEffect takes two arguments, 1) The function where the side effect occurs and 2) An array of dependancey variables that react will watch and trigger the effect if one changes. If the dependancy is an empty array it calls the side effect only once on page load:
+
+  ```
+  const handleSearch = event => {
+    setSearchTerm(event.target.value);
+    localStorage.setItem('search', event.target.value);
+  }
+  ```
+
+
+Custom Hooks:
